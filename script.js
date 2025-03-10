@@ -214,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nuevoEvento = document.createElement('div');
         nuevoEvento.classList.add('evento', 'draggable');
         
+        // Build the evento structure
         const eventoNombre = document.createElement('div');
         eventoNombre.classList.add('evento-nombre');
         
@@ -224,7 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const eventoActions = document.createElement('div');
         eventoActions.classList.add('evento-actions');
 
-        // Rename Evento Button
         const renameEventoBtn = createRenameButton(
             eventoNombre, 
             eventoName, 
@@ -233,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         );
 
-        // Delete Evento Button
         const deleteEventoBtn = createDeleteButton(eventoWithVariables, () => {
             eventosContainer.removeChild(eventoWithVariables);
         });
@@ -241,15 +240,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const variablesForEvento = document.createElement('div');
         variablesForEvento.classList.add('variables-for-evento');
 
-        // Create a separate container for variables
         const variablesContainer = document.createElement('div');
         variablesContainer.classList.add('variables-list');
 
-        // Create a separate container for the add button
         const variableAddContainer = document.createElement('div');
         variableAddContainer.classList.add('variable-add-container');
 
-        // Add Variable button
         const addVariableBtn = document.createElement('button');
         addVariableBtn.textContent = '+';
         addVariableBtn.classList.add('mini-btn');
@@ -260,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Append the new containers
+        // Assemble the structure
         variableAddContainer.appendChild(addVariableBtn);
         variablesForEvento.appendChild(variablesContainer);
         variablesForEvento.appendChild(variableAddContainer);
@@ -280,14 +276,10 @@ document.addEventListener('DOMContentLoaded', () => {
         eventoWithVariables.appendChild(nuevoEvento);
         eventoWithVariables.appendChild(variablesForEvento);
         
-        // Insert at the beginning of the container
-        if (eventosContainer.firstChild) {
-            eventosContainer.insertBefore(eventoWithVariables, eventosContainer.firstChild);
-        } else {
-            eventosContainer.appendChild(eventoWithVariables);
-        }
+        // Always insert at the beginning of the container
+        eventosContainer.insertBefore(eventoWithVariables, eventosContainer.firstChild);
 
-        setupEventoDraggable(nuevoEvento, eventosContainer);
+        setupEventoDraggable(eventoWithVariables, eventosContainer);
 
         saveToLocalStorage();
         return eventoWithVariables;
@@ -396,89 +388,109 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function setupSeparadorDraggable(separador) {
-        separador.setAttribute('draggable', 'true');
+    // Update the getDragAfterElement function for better performance
+    function getDragAfterElement(container, y) {
+        const draggableElements = Array.from(container.querySelectorAll('.separador:not(.dragging)'));
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
 
-        separador.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('type', 'separador');
+    // Update the getEventoDragAfterElement function
+    function getEventoDragAfterElement(container, y) {
+        const draggableElements = Array.from(container.querySelectorAll('.evento-with-variables:not(.dragging)'));
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    // Update the getVariableDragAfterElement function
+    function getVariableDragAfterElement(container, y) {
+        const draggableElements = Array.from(container.querySelectorAll('.variable-wrapper:not(.dragging)'));
+        
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    // Update the setupSeparadorDraggable function
+    function setupSeparadorDraggable(separador) {
+        const header = separador.querySelector('.separador-header');
+        header.setAttribute('draggable', 'true');
+
+        header.addEventListener('dragstart', (e) => {
             separador.classList.add('dragging');
+            e.dataTransfer.setData('type', 'separador');
+        });
+
+        header.addEventListener('dragend', () => {
+            separador.classList.remove('dragging');
+            saveToLocalStorage();
         });
 
         separador.addEventListener('dragover', (e) => {
             e.preventDefault();
             const draggingElement = document.querySelector('.dragging');
-            // Only allow if dragging another separador
             if (draggingElement && draggingElement.classList.contains('separador')) {
-                e.dataTransfer.dropEffect = 'move';
-            } else {
-                e.dataTransfer.dropEffect = 'none';
-            }
-        });
-
-        separador.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const draggingElement = document.querySelector('.dragging');
-            if (draggingElement && draggingElement.classList.contains('separador')) {
-                const separadorContainer = document.getElementById('separador-container');
                 const afterElement = getDragAfterElement(separadorContainer, e.clientY);
-                if (afterElement) {
-                    separadorContainer.insertBefore(draggingElement, afterElement);
-                } else {
-                    separadorContainer.appendChild(draggingElement);
+                if (afterElement !== separador) {
+                    if (afterElement) {
+                        separadorContainer.insertBefore(draggingElement, afterElement);
+                    } else {
+                        separadorContainer.appendChild(draggingElement);
+                    }
                 }
-                saveToLocalStorage();
             }
-        });
-
-        separador.addEventListener('dragend', () => {
-            separador.classList.remove('dragging');
         });
     }
 
-    function setupEventoDraggable(evento, parentContainer) {
-        const eventoWithVariables = evento.closest('.evento-with-variables');
+    // Update evento container drag and drop handling
+    function setupEventoDraggable(evento, eventosContainer) {
         const eventoNombre = evento.querySelector('.evento-nombre');
-        
-        // Make only the title bar draggable
         eventoNombre.setAttribute('draggable', 'true');
 
         eventoNombre.addEventListener('dragstart', (e) => {
-            eventoWithVariables.classList.add('dragging');
-            e.stopPropagation();
+            evento.classList.add('dragging');
             e.dataTransfer.setData('type', 'evento');
         });
 
         eventoNombre.addEventListener('dragend', () => {
-            eventoWithVariables.classList.remove('dragging');
+            evento.classList.remove('dragging');
+            saveToLocalStorage();
         });
 
-        // Remove the old dragover listener from parentContainer
-        // Instead, add dragover listeners to all eventos-container elements
+        // Add drag and drop between separators
         document.querySelectorAll('.eventos-container').forEach(container => {
             container.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                const draggingElement = document.querySelector('.dragging');
-                if (!draggingElement || !draggingElement.classList.contains('evento-with-variables')) return;
+                const draggingEvento = document.querySelector('.evento-with-variables.dragging');
+                if (!draggingEvento) return;
 
                 const afterElement = getEventoDragAfterElement(container, e.clientY);
-                if (afterElement && afterElement !== draggingElement) {
-                    container.insertBefore(draggingElement, afterElement);
-                } else if (!afterElement && draggingElement !== container.lastChild) {
-                    container.appendChild(draggingElement);
-                }
-            });
-
-            container.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const draggingElement = document.querySelector('.dragging');
-                if (draggingElement && draggingElement.classList.contains('evento-with-variables')) {
-                    const afterElement = getEventoDragAfterElement(container, e.clientY);
-                    if (afterElement) {
-                        container.insertBefore(draggingElement, afterElement);
-                    } else {
-                        container.appendChild(draggingElement);
-                    }
-                    saveToLocalStorage();
+                if (afterElement) {
+                    container.insertBefore(draggingEvento, afterElement);
+                } else {
+                    container.appendChild(draggingEvento);
                 }
             });
         });
@@ -510,59 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             saveToLocalStorage();
         });
-    }
-
-    function getEventoDragAfterElement(container, y) {
-        const draggableElements = [...container.children].filter(child => 
-            !child.classList.contains('dragging') && 
-            child.classList.contains('evento-with-variables')
-        );
-
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    function getVariableDragAfterElement(container, y) {
-        const draggableElements = [...container.children].filter(child => 
-            !child.classList.contains('dragging') && 
-            child.classList.contains('variable-wrapper')
-        );
-
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    function getDragAfterElement(container, y) {
-        const draggableElements = [...container.children].filter(child => {
-            return child !== document.querySelector('.dragging') && 
-                   (child.classList.contains('separador') || 
-                    child.classList.contains('evento-with-variables') || 
-                    child.classList.contains('variable-wrapper'));
-        });
-
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
     // Export functionality
