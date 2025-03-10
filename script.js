@@ -80,8 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
         renameBtn.textContent = '✎';
         renameBtn.classList.add('rename-btn');
         renameBtn.addEventListener('click', async () => {
-            const newName = await promptUser('Introduce un nuevo nombre:', currentText);
-            if (newName) {
+            // Get the most current text directly from the element before prompting
+            const mostCurrentText = element.querySelector('span')?.textContent.trim() || currentText;
+            const newName = await promptUser('Introduce un nuevo nombre:', mostCurrentText);
+            if (newName && newName !== mostCurrentText) {
                 renameCallback(newName);
                 saveToLocalStorage();
             }
@@ -150,6 +152,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const eventosContainer = document.createElement('div');
         eventosContainer.classList.add('eventos-container');
+        
+        // Add drop zone functionality
+        eventosContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const draggingElement = document.querySelector('.dragging');
+            if (draggingElement && draggingElement.classList.contains('evento-with-variables')) {
+                e.dataTransfer.dropEffect = 'move';
+            }
+        });
+
+        eventosContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const draggingElement = document.querySelector('.dragging');
+            if (draggingElement && draggingElement.classList.contains('evento-with-variables')) {
+                const afterElement = getEventoDragAfterElement(eventosContainer, e.clientY);
+                if (afterElement) {
+                    eventosContainer.insertBefore(draggingElement, afterElement);
+                } else {
+                    eventosContainer.appendChild(draggingElement);
+                }
+                saveToLocalStorage();
+            }
+        });
+
         separador.appendChild(eventosContainer);
 
         // If data is provided, recreate eventos and variables
@@ -168,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create Evento
     async function createEvento(separador, data = null) {
         const eventosContainer = separador.querySelector('.eventos-container');
-        
         const eventoName = data ? data.evento : await promptUser('Nombre del Evento:', 'Nuevo Evento');
         
         const eventoWithVariables = document.createElement('div');
@@ -238,8 +263,13 @@ document.addEventListener('DOMContentLoaded', () => {
         eventoWithVariables.appendChild(nuevoEvento);
         eventoWithVariables.appendChild(variablesForEvento);
         
-        eventosContainer.appendChild(eventoWithVariables);
-        
+        // Insert at the beginning of the container
+        if (eventosContainer.firstChild) {
+            eventosContainer.insertBefore(eventoWithVariables, eventosContainer.firstChild);
+        } else {
+            eventosContainer.appendChild(eventoWithVariables);
+        }
+
         setupEventoDraggable(nuevoEvento, eventosContainer);
 
         saveToLocalStorage();
@@ -248,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create Variable
     async function createVariable(variablesContainer, data = null) {
-        const variableName = data || await promptUser('Nombre de la Variable:', 'Nueva Variable');
+        const variableName = data ? data : await promptUser('Nombre de la Variable:', 'Nueva Variable');
         
         const nuevaVariable = document.createElement('div');
         nuevaVariable.classList.add('variable', 'draggable');
@@ -394,23 +424,42 @@ document.addEventListener('DOMContentLoaded', () => {
         eventoNombre.addEventListener('dragstart', (e) => {
             eventoWithVariables.classList.add('dragging');
             e.stopPropagation();
+            e.dataTransfer.setData('type', 'evento');
         });
 
         eventoNombre.addEventListener('dragend', () => {
             eventoWithVariables.classList.remove('dragging');
         });
 
-        parentContainer.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            const draggingElement = document.querySelector('.dragging');
-            if (!draggingElement || !draggingElement.classList.contains('evento-with-variables')) return;
+        // Remove the old dragover listener from parentContainer
+        // Instead, add dragover listeners to all eventos-container elements
+        document.querySelectorAll('.eventos-container').forEach(container => {
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const draggingElement = document.querySelector('.dragging');
+                if (!draggingElement || !draggingElement.classList.contains('evento-with-variables')) return;
 
-            const afterElement = getEventoDragAfterElement(parentContainer, e.clientY);
-            if (afterElement && afterElement !== eventoWithVariables) {
-                parentContainer.insertBefore(draggingElement, afterElement);
-            } else if (!afterElement && draggingElement !== parentContainer.lastChild) {
-                parentContainer.appendChild(draggingElement);
-            }
+                const afterElement = getEventoDragAfterElement(container, e.clientY);
+                if (afterElement && afterElement !== draggingElement) {
+                    container.insertBefore(draggingElement, afterElement);
+                } else if (!afterElement && draggingElement !== container.lastChild) {
+                    container.appendChild(draggingElement);
+                }
+            });
+
+            container.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const draggingElement = document.querySelector('.dragging');
+                if (draggingElement && draggingElement.classList.contains('evento-with-variables')) {
+                    const afterElement = getEventoDragAfterElement(container, e.clientY);
+                    if (afterElement) {
+                        container.insertBefore(draggingElement, afterElement);
+                    } else {
+                        container.appendChild(draggingElement);
+                    }
+                    saveToLocalStorage();
+                }
+            });
         });
     }
 

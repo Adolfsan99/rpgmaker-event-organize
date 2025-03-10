@@ -122,6 +122,10 @@ body {
 
 .variable-add-container .mini-btn {
     position: static;
+    width: 100%;
+    display: block;
+    text-align: center;
+    box-sizing: border-box;
 }
 
 .variable-wrapper {
@@ -134,6 +138,7 @@ body {
     border: 1px solid #eee;
     box-sizing: border-box;
     max-width: 100%;
+    overflow: hidden;
 }
 
 .variable {
@@ -269,6 +274,11 @@ body {
 
 .rename-btn:hover {
     color: #333;
+}
+
+.separador-header .rename-btn,
+.evento-nombre .rename-btn {
+    color: white;
 }
 
 .confirm-dialog {
