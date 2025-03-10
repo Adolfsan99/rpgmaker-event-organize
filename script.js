@@ -30,13 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const cancelBtn = promptDialog.querySelector('.prompt-cancel');
 
             confirmBtn.addEventListener('click', () => {
+                const value = input.value.trim();
                 document.body.removeChild(promptDialog);
-                resolve(input.value.trim() || defaultValue);
+                resolve(value || null); // Return null if empty
             });
 
             cancelBtn.addEventListener('click', () => {
                 document.body.removeChild(promptDialog);
-                resolve(defaultValue);
+                resolve(null); // Return null on cancel
             });
 
             input.focus();
@@ -98,9 +99,13 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteBtn.classList.add('delete-btn');
         deleteBtn.addEventListener('click', async () => {
             const confirmDelete = await showConfirmDialog('¿Estás seguro de que quieres eliminar esto?');
-            if (confirmDelete) {
-                deleteCallback();
-                saveToLocalStorage();
+            if (confirmDelete && elementToDelete.parentNode) {  // Check if parent exists
+                try {
+                    deleteCallback();
+                    saveToLocalStorage();
+                } catch (error) {
+                    console.error('Error deleting element:', error);
+                }
             }
         });
         return deleteBtn;
@@ -109,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create Separador
     async function createSeparador(data = null) {
         const separadorName = data ? data.header : await promptUser('Nombre del Separador:', 'Nuevo Separador');
+        if (separadorName === null) return null; // Don't create if cancelled
         
         const separador = document.createElement('div');
         separador.classList.add('separador', 'draggable');
@@ -140,7 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const addEventoBtn = document.createElement('button');
         addEventoBtn.textContent = '+';
         addEventoBtn.classList.add('mini-btn');
-        addEventoBtn.addEventListener('click', () => createEvento(separador, null));
+        addEventoBtn.addEventListener('click', async () => {
+            const evento = await createEvento(separador, null);
+            if (evento) {
+                saveToLocalStorage();
+            }
+        });
 
         separadorHeaderActions.appendChild(renameSeparadorBtn);
         separadorHeaderActions.appendChild(deleteSeparadorBtn);
@@ -193,9 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create Evento
     async function createEvento(separador, data = null) {
-        const eventosContainer = separador.querySelector('.eventos-container');
         const eventoName = data ? data.evento : await promptUser('Nombre del Evento:', 'Nuevo Evento');
+        if (eventoName === null) return null; // Don't create if cancelled
         
+        const eventosContainer = separador.querySelector('.eventos-container');
         const eventoWithVariables = document.createElement('div');
         eventoWithVariables.classList.add('evento-with-variables');
         
@@ -241,7 +253,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const addVariableBtn = document.createElement('button');
         addVariableBtn.textContent = '+';
         addVariableBtn.classList.add('mini-btn');
-        addVariableBtn.addEventListener('click', () => createVariable(variablesContainer));
+        addVariableBtn.addEventListener('click', async () => {
+            const variable = await createVariable(variablesContainer);
+            if (variable) {
+                saveToLocalStorage();
+            }
+        });
 
         // Append the new containers
         variableAddContainer.appendChild(addVariableBtn);
@@ -279,7 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create Variable
     async function createVariable(variablesContainer, data = null) {
         const variableName = data ? data : await promptUser('Nombre de la Variable:', 'Nueva Variable');
-        
+        if (variableName === null) return null; // Don't create if cancelled
+
         const nuevaVariable = document.createElement('div');
         nuevaVariable.classList.add('variable', 'draggable');
         
@@ -296,9 +314,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         );
 
-        // Delete Variable Button
+        // Delete Variable Button - Modified to remove the entire wrapper
         const deleteVariableBtn = createDeleteButton(nuevaVariable, () => {
-            variablesContainer.removeChild(nuevaVariable);
+            const wrapper = nuevaVariable.closest('.variable-wrapper');
+            if (wrapper && wrapper.parentNode) {
+                wrapper.parentNode.removeChild(wrapper);
+            }
         });
 
         const variableWrapper = document.createElement('div');
@@ -609,8 +630,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial setup - explicitly bind the event listener
     if (addSeparadorBtn) {
-        addSeparadorBtn.addEventListener('click', () => {
-            createSeparador();
+        addSeparadorBtn.addEventListener('click', async () => {
+            const separador = await createSeparador();
+            if (separador) {
+                saveToLocalStorage();
+            }
         });
     } else {
         console.error('Add separador button not found');
