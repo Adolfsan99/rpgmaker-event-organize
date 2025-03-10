@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Clear localStorage at the start
-    localStorage.removeItem('eventosData');
+    //localStorage.removeItem('eventosData');
 
     const separadorContainer = document.getElementById('separador-container');
     const addSeparadorBtn = document.getElementById('add-separador-btn');
@@ -308,29 +308,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load existing data from localStorage
     function loadFromLocalStorage() {
-        const savedData = localStorage.getItem('eventosData');
-        if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            parsedData.forEach(separadorData => createSeparador(separadorData));
+        try {
+            const savedData = localStorage.getItem('eventosData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                parsedData.forEach(separadorData => createSeparador(separadorData));
+            }
+        } catch (error) {
+            console.error('Error loading from localStorage:', error);
+            // If there's an error loading, clear the corrupted data
+            localStorage.removeItem('eventosData');
         }
     }
 
     // Save to localStorage
     function saveToLocalStorage() {
-        const separadores = Array.from(document.querySelectorAll('.separador')).map(separador => {
-            return {
-                header: separador.querySelector('.separador-header span').textContent.trim(),
-                eventos: Array.from(separador.querySelectorAll('.evento-with-variables')).map(eventoWithVars => {
-                    return {
-                        evento: eventoWithVars.querySelector('.evento-nombre span').textContent.trim(),
-                        variables: Array.from(eventoWithVars.querySelectorAll('.variable span'))
-                            .map(v => v.textContent.trim())
-                    };
-                })
-            };
-        });
-        
-        localStorage.setItem('eventosData', JSON.stringify(separadores));
+        try {
+            const separadores = Array.from(document.querySelectorAll('.separador')).map(separador => {
+                return {
+                    header: separador.querySelector('.separador-header span').textContent.trim(),
+                    eventos: Array.from(separador.querySelectorAll('.evento-with-variables')).map(eventoWithVars => {
+                        return {
+                            evento: eventoWithVars.querySelector('.evento-nombre span').textContent.trim(),
+                            variables: Array.from(eventoWithVars.querySelectorAll('.variable span'))
+                                .map(v => v.textContent.trim())
+                        };
+                    })
+                };
+            });
+            
+            localStorage.setItem('eventosData', JSON.stringify(separadores));
+            return true;
+        } catch (error) {
+            console.error('Error saving to localStorage:', error);
+            return false;
+        }
     }
 
     function setupSeparadorDraggable(separador) {
@@ -572,7 +584,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }, true);
     }
 
+    function setupAdditionalSaveTriggers() {
+        // Save on any content changes
+        const observer = new MutationObserver(() => {
+            saveToLocalStorage();
+        });
+
+        observer.observe(separadorContainer, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true
+        });
+
+        // Save on any drag operations
+        document.addEventListener('dragend', saveToLocalStorage);
+
+        // Save on any input events
+        document.addEventListener('input', (e) => {
+            if (e.target.closest('#separador-container')) {
+                saveToLocalStorage();
+            }
+        });
+    }
+
     setupEventListeners();
+    setupAdditionalSaveTriggers();
 
     // Load existing data
     loadFromLocalStorage();
