@@ -8,9 +8,19 @@
     <div id="app">
         <h1 class="app-title">Organizador de Eventos</h1>
         <div class="data-actions">
-            <button id="export-btn" class="action-btn">Exportar Datos</button>
+            <button id="export-btn" class="action-btn">
+                <svg viewBox="0 0 24 24"><path d="M13 3v12h-2V3H5l7-7 7 7h-6zm-2 15v2H3v-2h8zm6 0v2h-4v-2h4z"/></svg>
+                Exportar Datos
+            </button>
             <input type="file" id="import-input" accept=".json" style="display:none;">
-            <button id="import-btn" class="action-btn">Importar Datos</button>
+            <button id="import-btn" class="action-btn">
+                <svg viewBox="0 0 24 24"><path d="M13 5v12h-2V5H5l7-7 7 7h-6zm-2 15v2H3v-2h8zm6 0v2h-4v-2h4z"/></svg>
+                Importar Datos
+            </button>
+            <button id="invert-btn" class="action-btn">
+                <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5H7z M7 14l5-5 5 5H7z"/></svg>
+                Invertir Orden
+            </button>
         </div>
         <div class="separador-container" id="separador-container"></div>
         <button id="add-separador-btn" class="add-btn bottom-right-btn">+</button>

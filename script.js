@@ -600,6 +600,8 @@ document.addEventListener('DOMContentLoaded', () => {
         importInput.click();
     });
 
+    const invertBtn = document.getElementById('invert-btn');
+
     importInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -627,6 +629,27 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsText(file);
         }
     });
+
+    function invertOrder() {
+        // Invert separators order
+        const separadores = Array.from(document.querySelectorAll('.separador'));
+        separadores.reverse().forEach(separador => {
+            separadorContainer.appendChild(separador);
+            
+            // Invert eventos order within this separador
+            const eventosContainer = separador.querySelector('.eventos-container');
+            const eventos = Array.from(eventosContainer.querySelectorAll('.evento-with-variables'));
+            eventos.reverse().forEach(evento => {
+                eventosContainer.appendChild(evento);
+            });
+        });
+        
+        saveToLocalStorage();
+    }
+
+    if (invertBtn) {
+        invertBtn.addEventListener('click', invertOrder);
+    }
 
     // Initial setup - explicitly bind the event listener
     if (addSeparadorBtn) {
